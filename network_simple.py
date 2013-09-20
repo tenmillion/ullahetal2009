@@ -55,7 +55,7 @@ dh/dt = alpha_h*(1-h)-beta_h*h : 1
 # dgi/dt = -gi*(1./taui) : siemens
 alpha_m = 0.1*(mV**-1)*(v+30*mV)/ \
     (1.0 - exp((v+30*mV)/(10*mV)))/ms : Hz
-beta_m = 4.0*(mV**-1)*(-1.0*exp((v+55*mV)/(18*mV)))/ms : Hz
+beta_m = 4.0*exp((v+55*mV)/(-18*mV))/ms : Hz
 alpha_n = 0.01*(mV**-1)*(34*mV+v)/ \
     (1.0 - exp((v+34*mV)/(-10*mV)))/ms : Hz
 beta_n = .125*exp((v+44.0*mV)/(-80*mV))/ms : Hz
@@ -63,29 +63,27 @@ alpha_h = 0.07*exp((v+44*mV)/(-20*mV))/ms : Hz
 beta_h = 1./(1.0+exp((14*mV+v)/(-10*mV)))/ms : Hz
 m_inf = alpha_m/(alpha_m + beta_m) : 1
 
-I_k		= (g_kd/msiemens) * (n * n * n * n)*(v/mV-v_k/mV)*uamp	: amp
-#I_k	= ((g_kd/msiemens) * (n * n * n * n) + g_ahp/msiemens * Cai/(1.0+Cai) )*(v/mV-v_k/mV)*uamp	: amp
-I_na	= (g_na/msiemens) * (m_inf * m_inf * m_inf) * h * (v/mV-v_na/mV)*uamp		: amp
-I_mem	= -(g_l/msiemens) * (v/mV - v_l/mV)*uamp - I_na - I_k						: amp
+#I_k	= ((g_kd/msiemens) * (n * n * n * n) + g_ahp/msiemens * Cai/(1.0+Cai) )*(v/mV-EK/mV)*uamp	: amp
 ''')
 
 eqs_i = Equations('''
-alpha_n_v = 0.01 * (v + 34.0*mV)/( 1.0 - exp(-0.1 * (v + 34.0*mV)) ) /second : Hz
-alpha_h_v = 0.07 * exp(-1.0*(v/mV + 44.0)/20.0) /second : Hz
-beta_n_v = 0.125 * exp(-1.0*(v/mV + 44.0)/80.0) /second : Hz
-alpha_m_v = 0.1 * (v/mV+30.0)/( 1.0 - exp(-0.1 * (v/mV + 30.0)) ) /second : Hz
-beta_m_v = 4.0 * exp(-1.0*(v/mV + 55.0)/18.0) /second : Hz
-beta_h_v = 1.0 * 1.0 /( 1.0 + exp(-0.1 * (v/mV + 14.0)) ) /second : Hz
-m_inf_v = alpha_m_v/(alpha_m_v + beta_m_v) : 1
-
-I_k		= (g_kd/msiemens) * (n * n * n * n)*(v/mV-v_k/mV)*uamp	: amp
-I_na	= (g_na/msiemens) * (m_inf_v * m_inf_v * m_inf_v) * h * (v/mV-v_na/mV)*uamp	: amp
-I_mem	= -(g_l/msiemens) * (v/mV - v_l/mV)*uamp - I_na - I_k						: amp
-
-dv/dt	= (1/C) * I_mem		: volt
-# + I_ext + I_rand
-dn/dt	= phi * ( alpha_n_v*second * (1.0-n) - beta_n_v*second * n )	: 1.0
-dh/dt	= phi * ( alpha_h_v*second * (1.0-h) - beta_h_v*second * h )	: 1.0
+dv/dt = (g_l*(El-v) + g_na*(m_inf*m_inf*m_inf)*h*(v-ENa)-g_kd*(n*n*n*n)*(v-EK))/C : volt
+#dm/dt = alpha_m*(1-m)-beta_m*m : 1
+dn/dt = alpha_n*(1-n)-beta_n*n : 1
+dh/dt = alpha_h*(1-h)-beta_h*h : 1
+# dge/dt = -ge*(1./taue) : siemens
+# dgi/dt = -gi*(1./taui) : siemens
+alpha_m = 0.1*(mV**-1)*(v+30*mV)/ \
+    (1.0 - exp((v+30*mV)/(10*mV)))/ms : Hz
+# betam = 0.28*(mV**-1)*(v-VT-40*mV)/ \
+# (exp((v-VT-40*mV)/(5*mV))-1)/ms : Hz
+beta_m = 4.0*exp((v+55*mV)/(-18*mV))/ms : Hz
+alpha_n = 0.01*(mV**-1)*(34*mV+v)/ \
+    (1.0 - exp((v+34*mV)/(-10*mV)))/ms : Hz
+beta_n = .125*exp((v+44.0*mV)/(-80*mV))/ms : Hz
+alpha_h = 0.07*exp((v+44*mV)/(-20*mV))/ms : Hz
+beta_h = 1./(1.0+exp((14*mV+v)/(-10*mV)))/ms : Hz
+m_inf = alpha_m/(alpha_m + beta_m) : 1
 ''')
 
 #eqs_s = '''
@@ -150,7 +148,7 @@ E.v = -65.1034452264476897 * mvolt
 E.n = 0.645021617064742286*0.1         #potassium channel activation variable n for e network
 E.h = 0.981306641820766101             #sodium channel inactivation variable h for e network
 #E.s = 0.217441399671948571d-05         !variable s for temporal evolution of synaptic efficacy emanating from e network 
-E.Cai = 0.978772044450795857*0.0000001 *mole         #calcium concentration for e network
+#E.Cai = 0.978772044450795857*0.0000001 *mole         #calcium concentration for e network
 
 I.v = -65.1034452264476897 *mvolt             #membrane potential of inhibitory network
 I.n = 0.645021617064742286 * 0.1         #potassium channel activation variable n for e network
@@ -165,7 +163,7 @@ I.h = 0.981306641820766101             #sodium channel inactivation variable h f
 
 M_e = SpikeMonitor(E)
 M_i = SpikeMonitor(I)
-Mv_e = StateMonitor(E, 'Cai', record=True)
+Mv_e = StateMonitor(E, 'v', record=True)
 Mv_i = StateMonitor(I, 'v', record=True)
 
 try:
