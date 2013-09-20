@@ -27,12 +27,12 @@ A			= 20.0		# maximum transmitter concentration
 g_ca		= 0.1		* msiemens#/meter2 
 v_ca		= 120.0		* mvolt
 g_l			= 0.05		* msiemens#/meter2
-v_l			= -65.0		* mvolt
+El			= -65.0		* mvolt
 g_na		= 100.0		* msiemens#/meter2
-v_na		= 55.0		* mvolt
-g_k			= 40.0		* msiemens#/meter2
+ENa		= 55.0		* mvolt
+g_kd			= 40.0		* msiemens#/meter2
 g_ahp		= 0.01		* msiemens#/meter2
-v_k			= -80.0		* mvolt
+EK			= -80.0		* mvolt
 v_ee		= 0.0		* mvolt
 v_ie		= -80.0		* mvolt
 v_ei		= 0.0		* mvolt
@@ -45,28 +45,32 @@ alpha_ii	= 0.02		# for synaptic weights
 alpha_g	= 0.0
 
 #Equations
+
 eqs_e = Equations('''
-alpha_n_v = 0.01 * (v + 34.0)/( 1.0 - exp(-0.1 * (v + 34.0)) ) : 1.0
-alpha_h_v = 0.07 * exp(-1.0*(v/mV + 44.0)/20.0) : 1.0
-beta_n_v = 0.125 * exp(-1.0*(v/mV + 44.0)/80.0) : 1.0
-alpha_m_v = 0.1 * (v/mV+30.0)/( 1.0 - exp(-0.1 * (v/mV + 30.0)) ) /second : 1.0
-beta_m_v = 4.0 * exp(-1.0*(v/mV + 55.0)/18.0) /second : Hz
-beta_h_v = 1.0 * 1.0 /( 1.0 + exp(-0.1 * (v/mV + 14.0)) ) /second : Hz
-m_inf_v = alpha_m_v/(alpha_m_v + beta_m_v) : 1
+dv/dt = (g_l*(El-v) + g_na*(m_inf*m_inf*m_inf)*h*(v-ENa)-g_kd*(n*n*n*n)*(v-EK))/C : volt
+#dm/dt = alpha_m*(1-m)-beta_m*m : 1
+dn/dt = alpha_n*(1-n)-beta_n*n : 1
+dh/dt = alpha_h*(1-h)-beta_h*h : 1
+# dge/dt = -ge*(1./taue) : siemens
+# dgi/dt = -gi*(1./taui) : siemens
+alpha_m = 0.1*(mV**-1)*(v+30*mV)/ \
+    (1.0 - exp((v+30*mV)/(10*mV)))/ms : Hz
+beta_m = 4.0*(mV**-1)*(-1.0*exp((v+55*mV)/(18*mV)))/ms : Hz
+alpha_n = 0.01*(mV**-1)*(34*mV+v)/ \
+    (1.0 - exp((v+34*mV)/(-10*mV)))/ms : Hz
+beta_n = .125*exp((v+44.0*mV)/(-80*mV))/ms : Hz
+alpha_h = 0.07*exp((v+44*mV)/(-20*mV))/ms : Hz
+beta_h = 1./(1.0+exp((14*mV+v)/(-10*mV)))/ms : Hz
+m_inf = alpha_m/(alpha_m + beta_m) : 1
 
-I_k	= ((g_k/msiemens) * (n * n * n * n) + g_ahp/msiemens * Cai/(1.0+Cai) )*(v/mV-v_k/mV)*uamp	: amp
-I_na	= (g_na/msiemens) * (m_inf_v * m_inf_v * m_inf_v) * h * (v/mV-v_na/mV)*uamp		: amp
+I_k		= (g_kd/msiemens) * (n * n * n * n)*(v/mV-v_k/mV)*uamp	: amp
+#I_k	= ((g_kd/msiemens) * (n * n * n * n) + g_ahp/msiemens * Cai/(1.0+Cai) )*(v/mV-v_k/mV)*uamp	: amp
+I_na	= (g_na/msiemens) * (m_inf * m_inf * m_inf) * h * (v/mV-v_na/mV)*uamp		: amp
 I_mem	= -(g_l/msiemens) * (v/mV - v_l/mV)*uamp - I_na - I_k						: amp
-
-dv/dt	= (1/C) * (I_mem)		: volt
-# + I_ext + I_rand + I_syn
-dn/dt	= phi * ( alpha_n_v*second * (1.0-n) - beta_n_v*second * n )	: 1.0
-dh/dt	= phi * ( alpha_h_v*second * (1.0-h) - beta_h_v*second * h )	: 1.0
-dCai/dt = (-0.002 * (g_ca/msiemens) * (v/mV - v_ca/mV)/( 1.0 + exp( -1.0*(v/mV+25.0)/2.5 ) ) - Cai/80.0 )/second : 1.0
 ''')
 
 eqs_i = Equations('''
-alpha_n_v = 0.01 * (v/mV + 34.0)/( 1.0 - exp(-0.1 * (v/mV + 34.0)) ) /second : Hz
+alpha_n_v = 0.01 * (v + 34.0*mV)/( 1.0 - exp(-0.1 * (v + 34.0*mV)) ) /second : Hz
 alpha_h_v = 0.07 * exp(-1.0*(v/mV + 44.0)/20.0) /second : Hz
 beta_n_v = 0.125 * exp(-1.0*(v/mV + 44.0)/80.0) /second : Hz
 alpha_m_v = 0.1 * (v/mV+30.0)/( 1.0 - exp(-0.1 * (v/mV + 30.0)) ) /second : Hz
@@ -74,7 +78,7 @@ beta_m_v = 4.0 * exp(-1.0*(v/mV + 55.0)/18.0) /second : Hz
 beta_h_v = 1.0 * 1.0 /( 1.0 + exp(-0.1 * (v/mV + 14.0)) ) /second : Hz
 m_inf_v = alpha_m_v/(alpha_m_v + beta_m_v) : 1
 
-I_k		= (g_k/msiemens) * (n * n * n * n)*(v/mV-v_k/mV)*uamp	: amp
+I_k		= (g_kd/msiemens) * (n * n * n * n)*(v/mV-v_k/mV)*uamp	: amp
 I_na	= (g_na/msiemens) * (m_inf_v * m_inf_v * m_inf_v) * h * (v/mV-v_na/mV)*uamp	: amp
 I_mem	= -(g_l/msiemens) * (v/mV - v_l/mV)*uamp - I_na - I_k						: amp
 
