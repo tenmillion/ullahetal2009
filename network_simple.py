@@ -23,7 +23,7 @@ C			= 1.0		* ufarad#/cmeter2
 phi			= 3.0		* hertz
 tau_e		= 4.0		* msecond
 tau_i		= 8.0		* msecond
-A			= 20.0
+A			= 20.0		# maximum transmitter concentration
 g_ca		= 0.1		* msiemens#/meter2 
 v_ca		= 120.0		* mvolt
 g_l			= 0.05		* msiemens#/meter2
@@ -38,18 +38,18 @@ v_ie		= -80.0		* mvolt
 v_ei		= 0.0		* mvolt
 v_ii		= -80.0		* mvolt
 v_sp		= 40		* mvolt
-alpha_ee	= 0.12
-alpha_ie	= 0.06
-alpha_ei	= 0.2 
-alpha_ii	= 0.02
+alpha_ee	= 0.12		# for synaptic weights
+alpha_ie	= 0.06		# for synaptic weights
+alpha_ei	= 0.2 		# for synaptic weights
+alpha_ii	= 0.02		# for synaptic weights
 alpha_g	= 0.0
 
 #Equations
 eqs_e = Equations('''
-alpha_n_v = 0.01 * (v/mV + 34.0)/( 1.0 - exp(-0.1 * (v/mV + 34.0)) ) /second : Hz
-alpha_h_v = 0.07 * exp(-1.0*(v/mV + 44.0)/20.0) /second : Hz
-beta_n_v = 0.125 * exp(-1.0*(v/mV + 44.0)/80.0) /second : Hz
-alpha_m_v = 0.1 * (v/mV+30.0)/( 1.0 - exp(-0.1 * (v/mV + 30.0)) ) /second : Hz
+alpha_n_v = 0.01 * (v + 34.0)/( 1.0 - exp(-0.1 * (v + 34.0)) ) : 1.0
+alpha_h_v = 0.07 * exp(-1.0*(v/mV + 44.0)/20.0) : 1.0
+beta_n_v = 0.125 * exp(-1.0*(v/mV + 44.0)/80.0) : 1.0
+alpha_m_v = 0.1 * (v/mV+30.0)/( 1.0 - exp(-0.1 * (v/mV + 30.0)) ) /second : 1.0
 beta_m_v = 4.0 * exp(-1.0*(v/mV + 55.0)/18.0) /second : Hz
 beta_h_v = 1.0 * 1.0 /( 1.0 + exp(-0.1 * (v/mV + 14.0)) ) /second : Hz
 m_inf_v = alpha_m_v/(alpha_m_v + beta_m_v) : 1
@@ -91,44 +91,33 @@ dh/dt	= phi * ( alpha_h_v*second * (1.0-h) - beta_h_v*second * h )	: 1.0
 
 print 'Creating cells and synapses...'
 #Create cells
-Excitatory = NeuronGroup(N=100, model=eqs_e, threshold=EmpiricalThreshold(state='v',threshold=-20*mV,refractory=1*ms))
-Inhibitory = NeuronGroup(N=100, model=eqs_i, threshold=EmpiricalThreshold(state='v',threshold=-20*mV,refractory=1*ms))
+E = NeuronGroup(N=10, model=eqs_e, threshold=EmpiricalThreshold(state='v',threshold=-20*mV,refractory=2*ms))
+I = NeuronGroup(N=10, model=eqs_i, threshold=EmpiricalThreshold(state='v',threshold=-20*mV,refractory=2*ms))
 
 #Define synapses
-#S_ee = Synapses(Excitatory, Excitatory, model=eqs_s, pre='I_mem_post+=I_syn')
-#S_ei = Synapses(Excitatory, Inhibitory, model=eqs_s, pre='I_mem_post+=I_syn')
-#S_ie = Synapses(Inhibitory, Excitatory, model=eqs_s, pre='I_mem_post+=I_syn')
-#S_ii = Synapses(Inhibitory, Inhibitory, model=eqs_s, pre='I_mem_post+=I_syn')
-
-Cee = Connection(Excitatory, Excitatory, 'v', sparseness=0.6, weight=(60 * 0.27 / 10) * mV)
-Cei = Connection(Excitatory, Inhibitory, 'v', sparseness=0.6, weight=(60 * 0.27 / 10) * mV)
-Cii = Connection(Inhibitory, Inhibitory, 'v', sparseness=0.6, weight=(30 * 0.27 / 10) * mV)
-Cie = Connection(Inhibitory, Excitatory, 'v', sparseness=0.6, weight=(30 * 0.27 / 10) * mV)
+Cee = Connection(E, E, 'v')
+Cei = Connection(E, I, 'v')
+Cii = Connection(I, I, 'v')
+Cie = Connection(I, E, 'v')
 
 #Create synapses
-# S_ee[:,:] = True
-# S_ei[:,:] = True
-# S_ie[:,:] = True
-# S_ii[:,:] = True
-Cee[:,:] = True
-Cei[:,:] = True
-Cie[:,:] = True
-Cii[:,:] = True
+Cee.connect_random(sparseness=0.1, weight=0.5*mvolt)
+Cei.connect_random(sparseness=0.1, weight=0.5*mvolt)
+Cie.connect_random(sparseness=0.1, weight=0.5*mvolt)
+Cii.connect_random(sparseness=0.1, weight=0.5*mvolt)
+print 'done.'
+
+#Set up external inputs
+print 'setting up external input...'
+spiketimes = [(1,20*ms),(1,23*ms),(1,25*ms)]
+G = SpikeGeneratorGroup(1, spiketimes)
+CGe = Connection(G,E)
+CGi = Connection(G,I)
+CGe.connect_full(weight=50*volt)
+CGe.connect_full(weight=50*volt)
 print 'done.'
 
 #Set up synaptic weights
-# print 'Setting up synaptic weights...'
-# sq100 = sqrt(100.0/pi)
-# sq30 = sqrt(30.0/pi)
-
-# print 'done.'
-
-# spiketimes = [(0, 1 * ms), (0, 4 * ms),
-              # (1, 2 * ms), (1, 3 * ms)]
-# G1 = SpikeGeneratorGroup(2, spiketimes)
-
-# G = Connection(G1,Excitatory,sparse
-
 # for j in range(0,N): # From cell j in each group
 	# for k in range(0,N): # To cell k in each group
 		# if j == k: # No connection to itself
@@ -152,20 +141,39 @@ print 'done.'
 # TODO : Implement I_rand, I_ext, diffusion
 # thresh	= 0.0
 
-M_e = SpikeMonitor(Excitatory)
-M_i = SpikeMonitor(Inhibitory)
-# Ma = StateMonitor(Excitatory, 'v', record=True)
-# Mb = StateMonitor(Inhibitory, 'v', record=True)
+# Initialization
+E.v = -65.1034452264476897 * mvolt
+E.n = 0.645021617064742286*0.1         #potassium channel activation variable n for e network
+E.h = 0.981306641820766101             #sodium channel inactivation variable h for e network
+#E.s = 0.217441399671948571d-05         !variable s for temporal evolution of synaptic efficacy emanating from e network 
+E.Cai = 0.978772044450795857*0.0000001 *mole         #calcium concentration for e network
+
+I.v = -65.1034452264476897 *mvolt             #membrane potential of inhibitory network
+I.n = 0.645021617064742286 * 0.1         #potassium channel activation variable n for e network
+I.h = 0.981306641820766101             #sodium channel inactivation variable h for inhibitory network
+          # x((i-1)*dim+9) = 0.217441399671948571d-05         !variable s for temporal evolution of synaptic efficacy emanating from inhibitory network   
+          # x((i-1)*dim+10) = 7.22                            !extracellular potassium concentration for e network
+          # x((i-1)*dim+11) = 18.54                           !intracellular sodium concentration for e network
+          # x((i-1)*dim+12) = 7.22                            !extracellular potassium concentration for inhibitory network
+          # x((i-1)*dim+13) = 18.54                           !intracellular sodium concentration for inhibitory network
+          # x((i-1)*dim+14) = 0.0								!variable eta, modeling the synaptic block due to the depolarization for e network
+          # x((i-1)*dim+15) = 0.0								!variable eta, modeling the synaptic block due to the depolarization for inhibitory network 
+
+M_e = SpikeMonitor(E)
+M_i = SpikeMonitor(I)
+Mv_e = StateMonitor(E, 'Cai', record=True)
+Mv_i = StateMonitor(I, 'v', record=True)
 
 try:
 	print 'running simulation...'
-	run(500 * ms)
+	run(50 * ms)
 except Exception as e:
 	print str(type(e))
 	print str(e.args)
 	print e.message
 	print str(e)
 
+print M_e.nspikes
 print 'done.'
 se0 = [ M_e.spikes[i][0] for i in xrange(len(M_e.spikes)) ]
 se1 = [ M_e.spikes[i][1] for i in xrange(len(M_e.spikes)) ]
@@ -173,4 +181,6 @@ scatter(se1,se0,color='r')
 si0 = [ M_i.spikes[i][0] for i in xrange(len(M_i.spikes)) ]
 si1 = [ M_i.spikes[i][1] for i in xrange(len(M_i.spikes)) ]
 scatter(si1,si0,color='b')
+plot(Mv_e[1])
+plot(Mv_i[2],color='k')
 show()
