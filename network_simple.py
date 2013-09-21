@@ -93,8 +93,9 @@ m_inf = alpha_m/(alpha_m + beta_m) : 1
 
 print 'Creating cells and synapses...'
 #Create cells
-E = NeuronGroup(N=10, model=eqs_e, threshold=EmpiricalThreshold(state='v',threshold=-20*mV,refractory=2*ms))
-I = NeuronGroup(N=10, model=eqs_i, threshold=EmpiricalThreshold(state='v',threshold=-20*mV,refractory=2*ms))
+myclock=Clock(dt=0.02*ms)
+E = NeuronGroup(N=10, model=eqs_e, threshold=EmpiricalThreshold(state='v',threshold=-20*mV,refractory=2*ms),method='Euler',clock=myclock)
+I = NeuronGroup(N=10, model=eqs_i, threshold=EmpiricalThreshold(state='v',threshold=-20*mV,refractory=2*ms),method='Euler',clock=myclock)
 
 #Define synapses
 Cee = Connection(E, E, 'v')

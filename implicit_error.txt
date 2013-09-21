@@ -1,0 +1,5 @@
+    method=method)
+  File "c:\python27\lib\site-packages\brian\stateupdater.py", line 137, in magic
+_state_updater
+    raise TypeError, "General implicit methods are not implemented yet."
+TypeError: General implicit methods are not implemented yet.
