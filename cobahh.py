@@ -4,11 +4,11 @@ from brian import *
 area = 20000 * umetre ** 2
 Cm = (1 * ufarad * cm ** -2) * area
 gl = (5e-5 * siemens * cm ** -2) * area
-El = -60 * mV
-EK = -90 * mV
-ENa = 50 * mV
+El = -65 * mV
+EK = -80 * mV
+ENa = 100 * mV
 g_na = (100 * msiemens * cm ** -2) * area
-g_kd = (30 * msiemens * cm ** -2) * area
+g_kd = (40 * msiemens * cm ** -2) * area
 VT = 0 * mV
 # Time constants
 taue = 5 * ms
@@ -62,7 +62,7 @@ betan = .125*exp((-44*mV-v+VT)/(80*mV))/ms : Hz
 
 P = NeuronGroup(40, model=eqs,
     threshold=EmpiricalThreshold(threshold= -20 * mV,
-                                 refractory=3 * ms),
+                                 refractory= 3 * ms),
     implicit=True, freeze=True)
 Pe = P.subgroup(32)
 Pi = P.subgroup(8)
@@ -75,10 +75,11 @@ P.gi = (randn(len(P)) * 12 + 20) * 10. * nS
 
 # Record the number of spikes and a few traces
 trace = StateMonitor(P, 'v', record=[1, 10, 35])
-
-run(1 * second)
-
-plot(trace[1])
-plot(trace[10])
-plot(trace[35])
+M = SpikeMonitor(P)
+run(.5 * second)
+print M.nspikes
+raster_plot(M)
+# plot(trace[1])
+# plot(trace[10])
+# plot(trace[35])
 show()
