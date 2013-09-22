@@ -42,14 +42,14 @@ alphan = 0.01*(mV**-1)*(10*mV-(v+VTn))/ \
 betan = .125*exp((-(v+VTn))/(80*mV))/ms : Hz
 ''')
 
-P = NeuronGroup(4000, model=eqs,
+P = NeuronGroup(40, model=eqs,
     threshold=EmpiricalThreshold(threshold= -20 * mV,
                                  refractory=3 * ms),
     implicit=True, freeze=True)
-Pe = P.subgroup(3200)
-Pi = P.subgroup(800)
-# Ce = Connection(Pe, P, 'ge', weight=we, sparseness=0.02)
-# Ci = Connection(Pi, P, 'gi', weight=wi, sparseness=0.02)
+Pe = P.subgroup(32)
+Pi = P.subgroup(8)
+Ce = Connection(Pe, P, 'ge', weight=we, sparseness=0.02)
+Ci = Connection(Pi, P, 'gi', weight=wi, sparseness=0.02)
 # Initialization
 P.v = El + (randn(len(P)) * 5 - 5) * mV
 # P.ge = zeros(len(P)) * nS
@@ -63,8 +63,8 @@ G = SpikeGeneratorGroup(1, spiketimes)
 Input = Connection(G,Pe,weight=30*mV,sparseness=0.5)
 
 # Record the number of spikes and a few traces
-trace = StateMonitor(P, 'v', record=arange(37,50))
-trace2 = StateMonitor(P, 'gi', record=arange(37,50))
+trace = StateMonitor(P, 'v', record=arange(0,40))
+trace2 = StateMonitor(P, 'gi', record=arange(0,40))
 
 M = SpikeMonitor(P)
 run(500 * msecond)
@@ -72,9 +72,9 @@ print M.nspikes
 subplot(311)
 raster_plot(M)
 subplot(312)
-for i in arange(37,50):
+for i in arange(0,40):
 	plot(trace[i])
 subplot(313)
-for i in arange(37,50):
+for i in arange(0,40):
 	plot(trace2[i])
 show()
