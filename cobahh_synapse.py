@@ -69,12 +69,18 @@ P = NeuronGroup(N, model=eqs,
 Pe = P.subgroup(N/5*4)
 Pi = P.subgroup(N/5)
 
-Se = Synapses(Pe, P, model=eqs_esyn)
-Si = Synapses(Pi, P, model=eqs_isyn)
-Se[:,:] = True
-Si[:,:] = True
-P.Iesyn = Se.Iesyn
-P.Iisyn = Si.Iisyn
+See = Synapses(Pe, Pe, model=eqs_esyn)
+Sei = Synapses(Pe, Pi, model=eqs_esyn)
+Sie = Synapses(Pi, Pe, model=eqs_isyn)
+Sii = Synapses(Pi, Pi, model=eqs_isyn)
+See[:,:] = True
+Sei[:,:] = True
+Sie[:,:] = True
+Sii[:,:] = True
+Pe.Iesyn = See.Iesyn
+Pe.Iisyn = Sie.Iisyn # from I to E, inhibitory synapses
+Pi.Iesyn = Sei.Iesyn # from E to I, excitatory synapses
+Pi.Iisyn = Sii.Iisyn
 
 # Initialization
 P.v = El + (randn(len(P)) * 3 - 3) * mV
@@ -82,64 +88,77 @@ P.v = El + (randn(len(P)) * 3 - 3) * mV
 # Si.g_jk = abs(randn(len(Si))+67) * nS
 
 #Set up synaptic weights
-print "Setting up synaptic weights"
+print "Setting up synaptic weights..."
+
 sq100 = sqrt(100.0/pi)
 sq30 = sqrt(30.0/pi)
-w100 = zeros(N)
-w30 = zeros(N)
-for j in range(0,N):
-	for k in range(0,N):
-		w100[abs(j-k)]=alpha_ee*sq100*exp(-100.0*(float(j-k)/N)**2.0)
-		w30[abs(j-k)]=alpha_ii*sq30*exp(-30.0*(float(j-k)/N)**2.0)
+w_ee = zeros(len(Pe))
+w_ei = zeros(len(Pe))
+w_ie = zeros(len(Pe))
+w_ii = zeros(len(Pe)) # Think about alternative wiring scheme. Gutkin's doesn't work with Pe != Pi
+for j in range(0,len(Pe)):
+	for k in range(0,len(Pe)):
+		w_ee[abs(j-k)]=alpha_ee*sq100*exp(-100.0*(float(j-k)/N)**2.0)
+		w_ei[abs(j-k)]=alpha_ei*sq30*exp(-30.0*(float(j-k)/N)**2.0)
+		w_ie[abs(j-k)]=alpha_ie*sq30*exp(-30.0*(float(j-k)/N)**2.0)
+		w_ii[abs(j-k)]=alpha_ii*sq30*exp(-30.0*(float(j-k)/N)**2.0)
 
-for j in range(0,N): # From cell j in each group
-	for k in range(0,N): # To cell k in each group
+for j in range(0,len(Pe)): # From cell j in Pe
+	for k in range(0,len(Pe)): # To cell k in Pe
 		if j == k: # No connection to itself
-			Se.g_jk[j,k] = 0.0 *nS
-			Se.g_jk[j,k] = alpha_ei*sq30*nS
-			Si.g_jk[j,k] = alpha_ie*sq30*nS
-			Si.g_jk[j,k] = 0.0 *nS
+			See.g_jk[j,j] = 0.0 *nS
 		else:
-			# distance = (float(j-k)/N)**2.0
-			# Se.g_jk[j,k] = alpha_ee*sq100*exp(-100.0*distance)*nS
-			# Si.g_jk[j,k] = alpha_ii*sq30*exp(-30.0*distance)*nS
-			Se.g_jk[j,k] = w100[abs(j-k)]*nS
-			Si.g_jk[j,k] = w30[abs(j-k)]*nS
+			See.g_jk[j,k] = w_ee[abs(j-k)]*nS
+	for k in range(0,len(Pi)): # To cell k in Pi
+		Sei.g_jk[j,k] = w_ei[abs(j-k)]*nS
+		
+for j in range(0,len(Pi)): # From cell j in Pi
+	for k in range(0,len(Pe)): # To cell k in Pe
+		Sie.g_jk[j,k] = w_ie[abs(j-k)]*nS
+	for k in range(0,len(Pi)): # To cell k in Pi
+		if j == k: # No connection to itself
+			Sii.g_jk[j,j] = 0.0 *nS
+		else:
+			Sii.g_jk[j,k] = w_ii[abs(j-k)]*nS
+			
 print 'done.'
 
 # External input
+print "Setting up external input..."
 spiketimes = [(0,100*ms)]
 G = SpikeGeneratorGroup(1, spiketimes)
-Pe_in = Pe.subgroup(N/5)
-Input = Connection(G,Pe_in,weight=6.5*mV,sparseness=0.8)
-
+Input = Synapses(G, Pe, model = 'w : mV', pre = 'v_post += w')
+Input[:,:] = True
+for j in range(0,len(Pe)):
+	Input.w[j] = 10.*exp(-100.0*(float(j-(len(Pe)/2))/len(Pe))**2.0)*mV
+print "done."
+	
 # Record the number of spikes and a few traces
-trace = StateMonitor(Pe, 'v', record=arange(0,80))
-trace2 = StateMonitor(Pi, 'v', record=arange(0,20))
+trace = StateMonitor(Pe, 'v', record=arange(0,len(Pe)))
+trace2 = StateMonitor(Pi, 'v', record=arange(0,len(Pi)))
 Me = SpikeMonitor(Pe)
 Mi = SpikeMonitor(Pi)
 
+print "Running simulation..."
 run(500 * msecond)
-print Me.nspikes
-print Mi.nspikes
+print "done."
+print "Excitatory spikes: ", Me.nspikes
+print "Inhibitory spikes: ", Mi.nspikes
 
 subplot(411)
 raster_plot(Me)
 xlim(0,500)
+ylim(0,len(Pe))
 subplot(412)
 raster_plot(Mi)
 xlim(0,500)
+ylim(0,len(Pi))
 subplot(413)
-for i in arange(0,80):
+for i in arange(0,len(Pe)):
 	plot(trace[i])
 #xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
 subplot(414)
-for i in arange(0,20):
+for i in arange(0,len(Pi)):
 	plot(trace2[i])
 #xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
 savefig('foo.png')
-
-# f = open('spikes.txt', 'w')
-# for i in arange(0,400):
-	# f.write(M[i])
-# f.close()
