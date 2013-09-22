@@ -19,8 +19,8 @@ A = 20 * ms # dunno, but using ms to get s unitless
 # Reversal potentials
 Ee = 0 * mV
 Ei = -80 * mV
-we = 6 * nS # excitatory synaptic weight (voltage)
-wi = 67 * nS # inhibitory synaptic weight
+# we = 6 * nS # excitatory synaptic weight (voltage)
+# wi = 67 * nS # inhibitory synaptic weight
 
 # The model
 
@@ -58,12 +58,12 @@ g_jk : nS	# synaptic weight
 Iisyn = (g_jk * si_pre)*(Ei-v_post) : amp
 '''
 
-P = NeuronGroup(4000, model=eqs,
+P = NeuronGroup(400, model=eqs,
     threshold=EmpiricalThreshold(threshold= -20 * mV,
                                  refractory=3 * ms),
     implicit=True, freeze=True)
-Pe = P.subgroup(3200)
-Pi = P.subgroup(800)
+Pe = P.subgroup(320)
+Pi = P.subgroup(80)
 
 Se = Synapses(Pe, P, model=eqs_esyn)
 Si = Synapses(Pi, P, model=eqs_isyn)
@@ -78,9 +78,9 @@ Se.g_jk = 6 * nS
 Si.g_jk = 67 * nS
 
 # External input
-spiketimes = [(0,100*ms)]
+spiketimes = [(0,100*ms),(0,100*ms)]
 G = SpikeGeneratorGroup(1, spiketimes)
-Input = Connection(G,Pe,weight=30*mV,sparseness=0.5)
+Input = Connection(G,Pe,weight=6*mV,sparseness=0.5)
 
 # Record the number of spikes and a few traces
 trace = StateMonitor(P, 'v', record=arange(0,40))
