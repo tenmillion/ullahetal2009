@@ -66,8 +66,8 @@ P = NeuronGroup(N, model=eqs,
     threshold=EmpiricalThreshold(threshold= -20 * mV,
                                  refractory=3 * ms),
     implicit=True, freeze=True)
-Pe = P.subgroup(N/5*4)
-Pi = P.subgroup(N/5)
+Pe = P.subgroup(N/2)
+Pi = P.subgroup(N/2)
 
 See = Synapses(Pe, Pe, model=eqs_esyn)
 Sei = Synapses(Pe, Pi, model=eqs_esyn)
@@ -133,7 +133,7 @@ for j in range(0,len(Pe)):
 	Input.w[j] = 10.*exp(-100.0*(float(j-(len(Pe)/2))/len(Pe))**2.0)*mV
 print "done."
 	
-# Record the number of spikes and a few traces
+# Record the number of spikes and voltage traces
 trace = StateMonitor(Pe, 'v', record=arange(0,len(Pe)))
 trace2 = StateMonitor(Pi, 'v', record=arange(0,len(Pi)))
 Me = SpikeMonitor(Pe)
@@ -154,11 +154,15 @@ raster_plot(Mi)
 xlim(0,500)
 ylim(0,len(Pi))
 subplot(413)
+total = zeros(len(trace[0]))
+total2 = zeros(len(trace2[0]))
 for i in arange(0,len(Pe)):
-	plot(trace[i])
+	total += trace[i]
 #xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
+plot(total/len(Pe))
 subplot(414)
 for i in arange(0,len(Pi)):
-	plot(trace2[i])
+	total2 += trace2[i]
 #xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
+plot(total2/len(Pi))
 savefig('foo.png')
