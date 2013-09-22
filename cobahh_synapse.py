@@ -1,6 +1,9 @@
 from brian import *
 
 # Parameters
+N=200
+timestep = 0.1 * ms
+
 area = 20000 * umetre ** 2
 Cm = (1 * ufarad * cm ** -2) * area
 gl = (5e-5 * siemens * cm ** -2) * area
@@ -29,7 +32,7 @@ alpha_ii	= 0.02
 # The model
 
 eqs = Equations('''
-dv/dt = (gl*(El-v)+Iesyn+Iisyn-\
+dv/dt = (gl*(El-v)+Iesyn+Iisyn+Iext-\
     g_na*(m*m*m)*h*(v-ENa)-\
     g_kd*(n*n*n*n)*(v-EK))/Cm : volt
 dm/dt = alpham*(1-m)-betam*m : 1
@@ -50,6 +53,7 @@ sigma = 1./(1+exp((-(v+20*mV))/(4*mV)))/ms : Hz
 
 Iesyn : amp
 Iisyn : amp
+Iext : amp
 ''')
 
 eqs_esyn = '''
@@ -61,11 +65,12 @@ eqs_isyn = '''
 g_jk : nS	# synaptic weight
 Iisyn = (g_jk * si_pre)*(Ei-v_post) : amp
 '''
-N=200
+
+myclock=Clock(dt=timestep)
 P = NeuronGroup(N, model=eqs,
-    threshold=EmpiricalThreshold(threshold= -20 * mV,
-                                 refractory=3 * ms),
-    implicit=True, freeze=True)
+    threshold=EmpiricalThreshold(threshold= 20 * mV),
+                                  # refractory=3 * ms),
+    implicit=True, freeze=True, clock=myclock, reset=NoReset())
 Pe = P.subgroup(N/2)
 Pi = P.subgroup(N/2)
 
@@ -125,13 +130,12 @@ print 'done.'
 
 # External input
 print "Setting up external input..."
-spiketimes = [(0,100*ms)]
-G = SpikeGeneratorGroup(1, spiketimes)
-Input = Synapses(G, Pe, model = 'w : mV', pre = 'v_post += w')
-Input[:,:] = True
-for j in range(0,len(Pe)):
-	Input.w[j] = 10.*exp(-100.0*(float(j-(len(Pe)/2))/len(Pe))**2.0)*mV
+Pi.Iext = TimedArray([0.5*uA]*int((500*ms)/timestep),start=0*ms,dt=timestep)
+for j in range(21,80):
+	Pe[j].Iext = TimedArray([0*uA]*int((12*ms)/timestep)+[1.5*exp(-60.0*(float(j-(len(Pe)/2))/len(Pe))**2.0)*uA]*int((30*ms)/timestep),start=0*ms,dt=timestep)
+	plot([0*uA]*int((12*ms)/timestep)+[1.5*exp(-60.0*(float(j-(len(Pe)/2))/len(Pe))**2.0)*uA]*int((30*ms)/timestep))
 print "done."
+show()
 	
 # Record the number of spikes and voltage traces
 trace = StateMonitor(Pe, 'v', record=arange(0,len(Pe)))
@@ -140,7 +144,7 @@ Me = SpikeMonitor(Pe)
 Mi = SpikeMonitor(Pi)
 
 print "Running simulation..."
-run(500 * msecond)
+run(500 * ms)
 print "done."
 print "Excitatory spikes: ", Me.nspikes
 print "Inhibitory spikes: ", Mi.nspikes
@@ -158,11 +162,13 @@ total = zeros(len(trace[0]))
 total2 = zeros(len(trace2[0]))
 for i in arange(0,len(Pe)):
 	total += trace[i]
+	# plot(trace[i])
 #xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
 plot(total/len(Pe))
 subplot(414)
 for i in arange(0,len(Pi)):
 	total2 += trace2[i]
+	# plot(trace2[i])
 #xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
 plot(total2/len(Pi))
 savefig('foo.png')
