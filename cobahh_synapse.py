@@ -15,6 +15,7 @@ VTn = 44 * mV #44
 # Time constants
 taue = 5 * ms
 taui = 10 * ms
+A = 20 * ms # dunno, but using ms to get s unitless
 # Reversal potentials
 Ee = 0 * mV
 Ei = -80 * mV
@@ -24,14 +25,15 @@ wi = 67 * nS # inhibitory synaptic weight
 # The model
 
 eqs = Equations('''
-dv/dt = (gl*(El-v)+ge*(Ee-v)+gi*(Ei-v)-\
+dv/dt = (gl*(El-v)+Iesyn+Iisyn-\
     g_na*(m*m*m)*h*(v-ENa)-\
     g_kd*(n*n*n*n)*(v-EK))/Cm : volt
 dm/dt = alpham*(1-m)-betam*m : 1
 dn/dt = alphan*(1-n)-betan*n : 1
 dh/dt = alphah*(1-h)-betah*h : 1
-dge/dt = -ge*(1./taue) : siemens
-dgi/dt = -gi*(1./taui) : siemens
+dse/dt = ((A*ms)*sigma*(1-se)-se)/taue : 1
+dsi/dt = ((A*ms)*sigma*(1-si)-si)/taui : 1
+
 alpham = 0.1*(mV**-1)*(25*mV-(v+VTm))/ \
     (exp((25*mV-(v+VTm))/(10*mV))-1.)/ms : Hz
 betam = 4.0*exp((-(v+VTm))/(18*mV))/ms : Hz
@@ -40,7 +42,21 @@ betah = 1./(1+exp((30*mV-(v+VTh))/(10*mV)))/ms : Hz
 alphan = 0.01*(mV**-1)*(10*mV-(v+VTn))/ \
     (exp((10*mV-(v+VTn))/(10*mV))-1.)/ms : Hz
 betan = .125*exp((-(v+VTn))/(80*mV))/ms : Hz
+sigma = 1./(1+exp((-(v+20*mV))/(4*mV))/ms : Hz
+
+Iesyn : A
+Iisyn : A
 ''')
+
+eqs_esyn = '''
+g_jk : 1	# synaptic weight
+Iesyn = (g_jk * se_pre)*(Ee-v_post) : A
+'''
+
+eqs_isyn = '''
+g_jk : 1	# synaptic weight
+Iisyn = (g_jk * si_pre)*(Ei-v_post) : A
+'''
 
 P = NeuronGroup(4000, model=eqs,
     threshold=EmpiricalThreshold(threshold= -20 * mV,
@@ -48,14 +64,17 @@ P = NeuronGroup(4000, model=eqs,
     implicit=True, freeze=True)
 Pe = P.subgroup(3200)
 Pi = P.subgroup(800)
-Ce = Connection(Pe, P, 'ge', weight=we, sparseness=0.02)
-Ci = Connection(Pi, P, 'gi', weight=wi, sparseness=0.02)
+
+Se = Synapses(Pe, P, model=eqs_esyn)
+Si = Synapses(Pi, P, model=eqs_isyn)
+Se[:,:] = True
+P.Iesyn = Se.Iesyn
+P.Iisyn = Si.Iisyn
+
 # Initialization
 P.v = El + (randn(len(P)) * 5 - 5) * mV
-# P.ge = zeros(len(P)) * nS
-# P.gi = zeros(len(P)) * nS
-P.ge = (randn(len(P)) * 1.5 + 4) * 10. * nS
-P.gi = (randn(len(P)) * 12 + 20) * 10. * nS
+Se.g_jk = (randn(len(P)) * 1.5 + 4) * 10. * nS
+Si.g_jk = (randn(len(P)) * 12 + 20) * 10. * nS
 
 # External input
 spiketimes = [(0,100*ms)]
