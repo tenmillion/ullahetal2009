@@ -61,7 +61,7 @@ eqs_isyn = '''
 g_jk : nS	# synaptic weight
 Iisyn = (g_jk * si_pre)*(Ei-v_post) : amp
 '''
-N=400
+N=200
 P = NeuronGroup(N, model=eqs,
     threshold=EmpiricalThreshold(threshold= -20 * mV,
                                  refractory=3 * ms),
@@ -85,6 +85,13 @@ P.v = El + (randn(len(P)) * 3 - 3) * mV
 print "Setting up synaptic weights"
 sq100 = sqrt(100.0/pi)
 sq30 = sqrt(30.0/pi)
+w100 = zeros(N)
+w30 = zeros(N)
+for j in range(0,N):
+	for k in range(0,N):
+		w100[abs(j-k)]=alpha_ee*sq100*exp(-100.0*(float(j-k)/N)**2.0)
+		w30[abs(j-k)]=alpha_ii*sq30*exp(-30.0*(float(j-k)/N)**2.0)
+
 for j in range(0,N): # From cell j in each group
 	for k in range(0,N): # To cell k in each group
 		if j == k: # No connection to itself
@@ -93,20 +100,22 @@ for j in range(0,N): # From cell j in each group
 			Si.g_jk[j,k] = alpha_ie*sq30*nS
 			Si.g_jk[j,k] = 0.0 *nS
 		else:
-			distance = float((j-k)/N)**2.0
-			Se.g_jk[j,k] = alpha_ee*sq100*exp(-100.0*distance)*nS
-			Si.g_jk[j,k] = alpha_ii*sq30*exp(-30.0*distance)*nS
+			# distance = (float(j-k)/N)**2.0
+			# Se.g_jk[j,k] = alpha_ee*sq100*exp(-100.0*distance)*nS
+			# Si.g_jk[j,k] = alpha_ii*sq30*exp(-30.0*distance)*nS
+			Se.g_jk[j,k] = w100[abs(j-k)]*nS
+			Si.g_jk[j,k] = w30[abs(j-k)]*nS
 print 'done.'
 
 # External input
-spiketimes = [(0,100*ms),(0,100*ms)]
+spiketimes = [(0,100*ms)]
 G = SpikeGeneratorGroup(1, spiketimes)
 Pe_in = Pe.subgroup(N/5)
-Input = Connection(G,Pe_in,weight=5*mV,sparseness=0.3)
+Input = Connection(G,Pe_in,weight=6.5*mV,sparseness=0.8)
 
 # Record the number of spikes and a few traces
-trace = StateMonitor(Pe, 'v', record=arange(0,40))
-trace2 = StateMonitor(Pi, 'v', record=arange(0,40))
+trace = StateMonitor(Pe, 'v', record=arange(0,80))
+trace2 = StateMonitor(Pi, 'v', record=arange(0,20))
 Me = SpikeMonitor(Pe)
 Mi = SpikeMonitor(Pi)
 
@@ -121,11 +130,11 @@ subplot(412)
 raster_plot(Mi)
 xlim(0,500)
 subplot(413)
-for i in arange(0,40):
+for i in arange(0,80):
 	plot(trace[i])
 #xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
 subplot(414)
-for i in arange(0,40):
+for i in arange(0,20):
 	plot(trace2[i])
 #xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
 savefig('foo.png')
