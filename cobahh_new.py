@@ -48,12 +48,14 @@ P = NeuronGroup(4000, model=eqs,
     implicit=True, freeze=True)
 Pe = P.subgroup(3200)
 Pi = P.subgroup(800)
-Ce = Connection(Pe, P, 'ge', weight=we, sparseness=0.02)
-Ci = Connection(Pi, P, 'gi', weight=wi, sparseness=0.02)
+# Ce = Connection(Pe, P, 'ge', weight=we, sparseness=0.02)
+# Ci = Connection(Pi, P, 'gi', weight=wi, sparseness=0.02)
 # Initialization
 P.v = El + (randn(len(P)) * 5 - 5) * mV
-# P.ge = (randn(len(P)) * 1.5 + 4) * 10. * nS
-# P.gi = (randn(len(P)) * 12 + 20) * 10. * nS
+# P.ge = zeros(len(P)) * nS
+# P.gi = zeros(len(P)) * nS
+P.ge = (randn(len(P)) * 1.5 + 4) * 10. * nS
+P.gi = (randn(len(P)) * 12 + 20) * 10. * nS
 
 # External input
 spiketimes = [(0,100*ms)]
