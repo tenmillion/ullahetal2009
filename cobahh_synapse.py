@@ -21,6 +21,10 @@ Ee = 0 * mV
 Ei = -80 * mV
 # we = 6 * nS # excitatory synaptic weight (voltage)
 # wi = 67 * nS # inhibitory synaptic weight
+alpha_ee	= 0.12
+alpha_ie	= 0.06
+alpha_ei	= 0.2 
+alpha_ii	= 0.02
 
 # The model
 
@@ -57,13 +61,13 @@ eqs_isyn = '''
 g_jk : nS	# synaptic weight
 Iisyn = (g_jk * si_pre)*(Ei-v_post) : amp
 '''
-
-P = NeuronGroup(400, model=eqs,
+N=400
+P = NeuronGroup(N, model=eqs,
     threshold=EmpiricalThreshold(threshold= -20 * mV,
                                  refractory=3 * ms),
     implicit=True, freeze=True)
-Pe = P.subgroup(320)
-Pi = P.subgroup(80)
+Pe = P.subgroup(N/5*4)
+Pi = P.subgroup(N/5)
 
 Se = Synapses(Pe, P, model=eqs_esyn)
 Si = Synapses(Pi, P, model=eqs_isyn)
@@ -73,36 +77,57 @@ P.Iesyn = Se.Iesyn
 P.Iisyn = Si.Iisyn
 
 # Initialization
-P.v = El + (randn(len(P)) * 5 - 5) * mV
-Se.g_jk = 6 * nS
-Si.g_jk = 67 * nS
+P.v = El + (randn(len(P)) * 3 - 3) * mV
+# Se.g_jk = abs(randn(len(Se))+6) * nS   # Were these weights too big?
+# Si.g_jk = abs(randn(len(Si))+67) * nS
+
+#Set up synaptic weights
+print "Setting up synaptic weights"
+sq100 = sqrt(100.0/pi)
+sq30 = sqrt(30.0/pi)
+for j in range(0,N): # From cell j in each group
+	for k in range(0,N): # To cell k in each group
+		if j == k: # No connection to itself
+			Se.g_jk[j,k] = 0.0 *nS
+			Se.g_jk[j,k] = alpha_ei*sq30*nS
+			Si.g_jk[j,k] = alpha_ie*sq30*nS
+			Si.g_jk[j,k] = 0.0 *nS
+		else:
+			distance = float((j-k)/N)**2.0
+			Se.g_jk[j,k] = alpha_ee*sq100*exp(-100.0*distance)*nS
+			Si.g_jk[j,k] = alpha_ii*sq30*exp(-30.0*distance)*nS
+print 'done.'
 
 # External input
 spiketimes = [(0,100*ms),(0,100*ms)]
 G = SpikeGeneratorGroup(1, spiketimes)
-Input = Connection(G,Pe,weight=6*mV,sparseness=0.5)
+Pe_in = Pe.subgroup(N/5)
+Input = Connection(G,Pe_in,weight=5*mV,sparseness=0.3)
 
 # Record the number of spikes and a few traces
-trace = StateMonitor(P, 'v', record=arange(0,40))
-trace2 = StateMonitor(P, 'se', record=arange(0,40))
+trace = StateMonitor(Pe, 'v', record=arange(0,40))
+trace2 = StateMonitor(Pi, 'v', record=arange(0,40))
+Me = SpikeMonitor(Pe)
+Mi = SpikeMonitor(Pi)
 
-M = SpikeMonitor(P)
 run(500 * msecond)
-print M.nspikes
+print Me.nspikes
+print Mi.nspikes
+
 subplot(411)
-raster_plot(M)
+raster_plot(Me)
 xlim(0,500)
 subplot(412)
-raster_plot(M)
-xlim(99.5,115)
+raster_plot(Mi)
+xlim(0,500)
 subplot(413)
 for i in arange(0,40):
 	plot(trace[i])
-xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
+#xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
 subplot(414)
 for i in arange(0,40):
 	plot(trace2[i])
-xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
+#xlim(len(trace[1])*99.5/500,len(trace[1])*115/500)
 savefig('foo.png')
 
 # f = open('spikes.txt', 'w')
