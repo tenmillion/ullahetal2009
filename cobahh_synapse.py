@@ -42,7 +42,7 @@ betah = 1./(1+exp((30*mV-(v+VTh))/(10*mV)))/ms : Hz
 alphan = 0.01*(mV**-1)*(10*mV-(v+VTn))/ \
     (exp((10*mV-(v+VTn))/(10*mV))-1.)/ms : Hz
 betan = .125*exp((-(v+VTn))/(80*mV))/ms : Hz
-sigma = 1./(1+exp((-(v+20*mV))/(4*mV))/ms : Hz
+sigma = 1./(1+exp((-(v+20*mV))/(4*mV)))/ms : Hz
 
 Iesyn : A
 Iisyn : A

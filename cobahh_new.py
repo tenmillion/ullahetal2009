@@ -42,12 +42,12 @@ alphan = 0.01*(mV**-1)*(10*mV-(v+VTn))/ \
 betan = .125*exp((-(v+VTn))/(80*mV))/ms : Hz
 ''')
 
-P = NeuronGroup(40, model=eqs,
+P = NeuronGroup(4000, model=eqs,
     threshold=EmpiricalThreshold(threshold= -20 * mV,
                                  refractory=3 * ms),
     implicit=True, freeze=True)
-Pe = P.subgroup(32)
-Pi = P.subgroup(8)
+Pe = P.subgroup(3200)
+Pi = P.subgroup(800)
 Ce = Connection(Pe, P, 'ge', weight=we, sparseness=0.02)
 Ci = Connection(Pi, P, 'gi', weight=wi, sparseness=0.02)
 # Initialization
